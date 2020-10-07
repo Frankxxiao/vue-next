@@ -99,6 +99,7 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (!isReadonly) {
+      // 通过 track 方法收集依赖（也就是副作用 effects）
       track(target, TrackOpTypes.GET, key)
     }
 
@@ -108,6 +109,7 @@ function createGetter(isReadonly = false, shallow = false) {
 
     if (isRef(res)) {
       // ref unwrapping - does not apply for Array + integer key.
+      // ref 的情况下会自动拆箱，不应用于数组/获取数组下标的情况。这是为什么呢
       const shouldUnwrap = !targetIsArray || !isIntegerKey(key)
       return shouldUnwrap ? res.value : res
     }
@@ -116,6 +118,7 @@ function createGetter(isReadonly = false, shallow = false) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
+      // 返回 proxy 后的响应式数据
       return isReadonly ? readonly(res) : reactive(res)
     }
 
@@ -136,6 +139,7 @@ function createSetter(shallow = false) {
     const oldValue = (target as any)[key]
     if (!shallow) {
       value = toRaw(value)
+      // 旧的值是响应式，新的值不是响应式，直接赋值然后返回
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         oldValue.value = value
         return true
@@ -148,8 +152,10 @@ function createSetter(shallow = false) {
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
         : hasOwn(target, key)
+    // 核心部分
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
+    // 通过 trigger 方法来触发更新操作
     if (target === toRaw(receiver)) {
       if (!hadKey) {
         trigger(target, TriggerOpTypes.ADD, key, value)

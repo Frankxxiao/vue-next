@@ -7,9 +7,22 @@ import { EMPTY_OBJ, isArray, isIntegerKey, isMap } from '@vue/shared'
 // raw Sets to reduce memory overhead.
 type Dep = Set<ReactiveEffect>
 type KeyToDepMap = Map<any, Dep>
+
+/**
+ * 存储响应式的 key 与 副作用effect 之间的关联映射。targetMap 的格式类似下面
+ * {
+ *   target1: {
+ *     key: [effect1, effect2]
+ *   },
+ *   target2: {
+ *     key: [effect3, effect4]
+ *   }
+ * }
+ */
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
 export interface ReactiveEffect<T = any> {
+  // 这种写法之前没见过。。
   (): T
   _isEffect: true
   id: number
@@ -81,6 +94,7 @@ function createReactiveEffect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
+  // 将 fn 内化为了一个 effect，并且在真正执行的时候，将其与 activeEffect 关联起来
   const effect = function reactiveEffect(): unknown {
     if (!effect.active) {
       return options.scheduler ? undefined : fn()
@@ -91,6 +105,8 @@ function createReactiveEffect<T = any>(
         enableTracking()
         effectStack.push(effect)
         activeEffect = effect
+        // 此处真正执行一遍，让 effect 内部的响应式变量能够关联上这个effect
+        // 在 proxy.get 中，触发 track，会有 dep.add(activeEffect)
         return fn()
       } finally {
         effectStack.pop()
@@ -135,7 +151,7 @@ export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
 }
-
+// 所有响应式的核心，最终还是回到了 track / trigger 中来
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {
     return

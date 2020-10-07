@@ -34,6 +34,7 @@ class ComputedRefImpl<T> {
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean
   ) {
+    // computed 是一个特殊的 effect
     this.effect = effect(getter, {
       lazy: true,
       scheduler: () => {

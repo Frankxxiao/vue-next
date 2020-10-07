@@ -11,7 +11,7 @@ import {
   shallowCollectionHandlers
 } from './collectionHandlers'
 import { UnwrapRef, Ref } from './ref'
-
+// 设定对象的私有属性，为 Vue 内部所用
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
@@ -164,6 +164,7 @@ function createReactiveObject(
   if (targetType === TargetType.INVALID) {
     return target
   }
+  // 核心的 Proxy 应用
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers

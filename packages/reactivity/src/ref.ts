@@ -23,6 +23,7 @@ const convert = <T extends unknown>(val: T): T =>
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
+  // 通过特殊属性来界定 ref，在 reactive 中有类似的定义
   return Boolean(r && r.__v_isRef === true)
 }
 
@@ -43,8 +44,9 @@ export function shallowRef<T = any>(): Ref<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
-
+// 核心代码模块
 class RefImpl<T> {
+  // 这里存放 value 变量
   private _value: T
 
   public readonly __v_isRef = true
@@ -54,6 +56,7 @@ class RefImpl<T> {
   }
 
   get value() {
+    // 通过 track 方法收集依赖
     track(toRaw(this), TrackOpTypes.GET, 'value')
     return this._value
   }
@@ -62,6 +65,7 @@ class RefImpl<T> {
     if (hasChanged(toRaw(newVal), this._rawValue)) {
       this._rawValue = newVal
       this._value = this._shallow ? newVal : convert(newVal)
+      // 通过 trigger 方法来触发更新操作
       trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
     }
   }
